@@ -56,8 +56,8 @@
 
 - (id)init {
   UIWindow *window = [[UIApplication sharedApplication] keyWindow];
-  CGRect frame = window.frame;
-  
+  CGRect frame = window.rootViewController.view.bounds;
+
   self = [super initWithFrame:frame];
   if (self) {
     self.rootViewController = window.rootViewController;
