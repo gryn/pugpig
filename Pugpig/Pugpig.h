@@ -29,6 +29,8 @@
 
 #import "KGPagedDocControl.h"
 #import "KGPagedDocThumbnailControl.h"
+#import "KGPagedDocBasicNavControl.h"
+#import "KGPagedDocPageNavControl.h"
 #import "KGLocalFileDataSource.h"
 #import "KGInMemoryImageStore.h"
 #import "KGDiskImageStore.h"
