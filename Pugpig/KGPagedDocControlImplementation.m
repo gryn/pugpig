@@ -43,6 +43,7 @@
 @property (nonatomic, retain) UIWebView *mainWebView, *backgroundWebView;
 @property (nonatomic, retain) UIImageView *leftImageView, *rightImageView, *centreImageView;
 @property (nonatomic, retain) UIActivityIndicatorView *leftBusyView, *rightBusyView, *centreBusyView;
+@property (nonatomic, retain) NSDate *debugTime;
 
 - (void)initControl;
 - (void)calculateDefaultSizes;
@@ -58,7 +59,7 @@
 - (UIWebView*)createWebViewWithSize:(CGSize)size;
 - (void)stopWebView:(UIWebView*)webView;
 - (void)webView:(UIWebView*)webView didFinish:(KGPagedDocFinishedMask)finished;
-- (BOOL)webViewHasJavascriptDelay:(UIWebView*)webView;
+- (BOOL)webView:(UIWebView*)webView hasMetaTag:(NSString *)tagName withDefault:(BOOL) defaultValue;
 - (void)takeSnapshotForWebView:(UIWebView*)webView;
 - (void)loadMainWebView;
 - (void)showMainWebView;
@@ -103,6 +104,7 @@
 @synthesize mainWebView, backgroundWebView;
 @synthesize leftImageView, rightImageView, centreImageView;
 @synthesize leftBusyView, rightBusyView, centreBusyView;
+@synthesize debugTime;
 
 //------------------------------------------------------------------------------
 // MARK: NSObject/UIView messages
@@ -193,6 +195,7 @@
     
     [imageStore removeAllImages];
     
+    [self stopWebView:mainWebView];
     [self updateNavigatorDataSource];
     [self positionScrollViewContent];
     [self setPageNumber:pageNumber];
@@ -241,6 +244,13 @@
   
   CGRect rect = [self frameForPageNumber:newPageNumber];
   [scrollView scrollRectToVisible:rect animated:animated];
+}
+
+- (void)setPageByUrl:(NSURL *)url animated:(BOOL)animated {
+    NSInteger page = [self pageNumberForURL:url];
+    if (page != -1 ) {
+        [self setPageNumber:page animated:animated];
+    }
 }
 
 - (CGFloat)fractionalPageNumber {
@@ -319,6 +329,11 @@
 
 - (BOOL)webView:(UIWebView*)webView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType {
   NSURL *URL = [request URL];
+  
+  if( delegate && ![delegate document:(KGPagedDocControl*)self shouldProcessURL:URL] ) {
+    return NO;
+  }
+  
   BOOL shouldStart = YES;
   BOOL isPlumbSchema = [[URL scheme] isEqualToString:@"pugpig"];
   if (isPlumbSchema) {
@@ -342,13 +357,14 @@
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView {
   [self webView:webView didFinish:KGPDFinishedLoad];
-  if (![self webViewHasJavascriptDelay:webView])
+  if (![self webView:webView hasMetaTag:@"delaySnapshotUntilReady" withDefault:NO]) {
     [self webView:webView didFinish:KGPDFinishedJS];
+  }
 }
 
 - (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
   [self webView:webView didFinish:KGPDFinishedLoad];
-  if (![self webViewHasJavascriptDelay:webView])
+  if (![self webView:webView hasMetaTag:@"delaySnapshotUntilReady" withDefault:NO])
     [self webView:webView didFinish:KGPDFinishedJS];
 }
 
@@ -537,6 +553,13 @@
 }
 
 - (void)webView:(UIWebView*)webView didFinish:(KGPagedDocFinishedMask)finished {
+
+  if([self.debugTime timeIntervalSinceNow]*-1 > 0.01) {
+    NSString *name;
+    name = [[webView.request URL] lastPathComponent];
+    NSLog(@"LOAD: %5.0fms %@", [self.debugTime timeIntervalSinceNow]*(-1000), name);
+  }
+  self.debugTime = [NSDate date];
   if (webView == mainWebView) {
     if (mainFinishedMask == KGPDFinishedEverything) return;
     mainFinishedMask |= finished;
@@ -572,20 +595,24 @@
   }
 }
 
-- (BOOL)webViewHasJavascriptDelay:(UIWebView*)webView {
-  NSString *delayCheckJS =
-  @"function getDelayMeta() {"
-  @"  var m = document.getElementsByTagName('meta');"
-  @"  for(var i in m) { "
-  @"    if(m[i].name == 'delaySnapshotUntilReady') {"
-  @"      return m[i].content;"
-  @"    }"
-  @"  }"
-  @"  return '';"
-  @"}"
-  @"getDelayMeta();";
-  NSString *mustDelayTag = [webView stringByEvaluatingJavaScriptFromString:delayCheckJS];
-  return (mustDelayTag && [mustDelayTag localizedCaseInsensitiveCompare:@"yes"] == NSOrderedSame);    
+- (BOOL)webView:(UIWebView*)webView hasMetaTag:(NSString *)tagName withDefault:(BOOL)defaultValue {
+  NSString *defaultValueAsString = defaultValue ? @"YES" : @"NO";
+  NSString *checkJS = 
+    [NSString stringWithFormat:
+     @"function getMetaTag() {"
+     @"  var m = document.getElementsByTagName('meta');"
+     @"  for(var i in m) { "
+     @"    if(m[i].name == '%@') {"
+     @"      return m[i].content || '%@';"
+     @"    }"
+     @"  }"
+     @"  return '%@';"
+     @"}"
+     @"getMetaTag();", tagName, defaultValueAsString, defaultValueAsString];
+  NSString *metaTagContent = [webView stringByEvaluatingJavaScriptFromString:checkJS];
+  if(!metaTagContent)  // really we should always have a string..
+    return defaultValue;
+  return [metaTagContent localizedCaseInsensitiveCompare:@"yes"] == NSOrderedSame; 
 }
 
 - (void)takeSnapshotForWebView:(UIWebView*)webView {
@@ -626,6 +653,7 @@
   if (mainWebView && mainWebView.tag == pageNumber) return;
   
   // Cancel any background loads since we want the main load to take priority
+  self.debugTime = [NSDate date];
   [self cancelBackgroundLoad];
   
   [self stopWebView:mainWebView];
@@ -656,6 +684,8 @@
 
 - (void)showMainWebView {
   mainWebView.frame = [self frameForPageNumber:pageNumber];
+  mainWebView.scrollEnabled = 
+   [self webView:mainWebView hasMetaTag:@"enableScrolling" withDefault:self.scrollEnabled];
   // When scrolling is enabled, we need to make sure the scroll width of the
   // web view is no wider than its view width. If not, the web view's scroller
   // will intercept gestures that were intended for the containing scroll view.

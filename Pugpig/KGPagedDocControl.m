@@ -61,4 +61,7 @@
   // implemented in KGPagedDocControlImplementation
 }
 
+- (void)setPageByUrl:(NSURL *)url animated:(BOOL)animated {
+    // implemented in KGPagedDocControlImplementation
+}
 @end

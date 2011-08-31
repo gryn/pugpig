@@ -52,5 +52,6 @@
 - (void)hideUntilInitialised;
 - (void)hideUntilInitialised:(NSUInteger)requiredPages;
 - (void)setPageNumber:(NSUInteger)newPageNumber animated:(BOOL)animated;
+- (void)setPageByUrl:(NSURL *)url animated:(BOOL)animated;
 
 @end
