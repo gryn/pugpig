@@ -70,7 +70,7 @@
     self.progressBar = [[[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar] autorelease];
     CGSize isize = frame.size;
     CGSize psize = progressBar.bounds.size;
-    [progressBar setFrame:CGRectMake((isize.width-psize.width)/2,(isize.height-psize.height)/2,psize.width,psize.height)];
+    [progressBar setFrame:CGRectMake((isize.width-psize.width)/2,isize.height*2/3-psize.height/2,psize.width,psize.height)];
     [progressBar setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin|UIViewAutoresizingFlexibleTopMargin|UIViewAutoresizingFlexibleBottomMargin];
     [background addSubview:progressBar];
   
