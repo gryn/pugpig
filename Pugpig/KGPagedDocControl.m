@@ -46,7 +46,7 @@
 @dynamic bounces;
 
 + (id)alloc {
-  return [KGPagedDocControlImplementation alloc];
+  return (id)[KGPagedDocControlImplementation alloc];
 }
 
 - (void)hideUntilInitialised {
@@ -63,5 +63,13 @@
 
 - (void)setPageByUrl:(NSURL *)url animated:(BOOL)animated {
     // implemented in KGPagedDocControlImplementation
+}
+
+- (NSString *)executeJavascriptWithString:(NSString *)code {
+  // implemented in KGPagedDocControlImplementation
+  return nil;
+}
+- (void)stateChanged {
+  // implemented in KGPagedDocControlImplementation
 }
 @end

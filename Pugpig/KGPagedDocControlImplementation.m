@@ -174,8 +174,8 @@
 
 - (void)hideUntilInitialised:(NSUInteger)requiredPages {
   startupRequiredPages = MIN(requiredPages, [self numberOfPages]);
-  if ([self startupPagesIntialised] < startupRequiredPages)
-    self.startupView = [[[KGStartupView alloc] init] autorelease];
+  self.startupView = [[[KGStartupView alloc] init] autorelease];
+  [self startupUpdateProgress:NO];
 }
 
 - (void)setImageStore:(id<KGPagedDocControlImageStore>)newImageStore {
@@ -199,6 +199,7 @@
     [self updateNavigatorDataSource];
     [self positionScrollViewContent];
     [self setPageNumber:pageNumber];
+    [self cancelBackgroundLoad];
     [self startBackgroundLoadAfterDelay:0];
   }
 }
@@ -421,10 +422,9 @@
 
 - (BOOL)interfaceOrientationMatchesOrientation:(KGOrientation)orientation {
   UIInterfaceOrientation interfaceOrientation = [[UIApplication sharedApplication] statusBarOrientation];
-  return (
-    UIInterfaceOrientationIsLandscape(interfaceOrientation) && orientation == KGLandscapeOrientation ||
-    UIInterfaceOrientationIsPortrait(interfaceOrientation) && orientation == KGPortraitOrientation
-  );
+  return
+    (UIInterfaceOrientationIsLandscape(interfaceOrientation) && orientation == KGLandscapeOrientation) ||
+    (UIInterfaceOrientationIsPortrait(interfaceOrientation) && orientation == KGPortraitOrientation);
 }
 
 - (CGRect)frameForPageNumber:(NSUInteger)page {
@@ -613,6 +613,12 @@
   if(!metaTagContent)  // really we should always have a string..
     return defaultValue;
   return [metaTagContent localizedCaseInsensitiveCompare:@"yes"] == NSOrderedSame; 
+}
+
+- (NSString *)executeJavascriptWithString:(NSString *)code {
+  // we don't know which webview to send to, so send to both but only return the result from the main view!?
+  [backgroundWebView stringByEvaluatingJavaScriptFromString:code];
+  return [mainWebView stringByEvaluatingJavaScriptFromString:code];
 }
 
 - (void)takeSnapshotForWebView:(UIWebView*)webView {
@@ -831,19 +837,24 @@
   // loaded, but not yet snapshot). When the snapshot is eventually taken
   // the loading screen will close immediately.
   
-  if (startupView) {
-    NSUInteger gotPages = [self startupPagesIntialised];
+  if(!startupView) return;
     
-    if (gotPages >= startupRequiredPages) {
-      [startupView removeFromSuperview];
-      self.startupView = nil;
-    }
-    else {
-      CGFloat fractionalPages = (CGFloat)gotPages + (afterSnapshot ? 0 : 0.5);
-      CGFloat maximumPages = (CGFloat)startupRequiredPages - 0.5;
-      [startupView setProgress:(fractionalPages / maximumPages)];
-    }  
+  NSUInteger gotPages = [self startupPagesIntialised];
+
+  if (gotPages >= startupRequiredPages) {
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:0.5];
+    [startupView setAlpha:0.0];
+    [UIView setAnimationDelegate:startupView];
+    [UIView setAnimationDidStopSelector:@selector(removeFromSuperview)];
+    [UIView commitAnimations];
+    self.startupView = nil;
   }
+  else {
+    CGFloat fractionalPages = (CGFloat)gotPages + (afterSnapshot ? 0 : 0.5);
+    CGFloat maximumPages = (CGFloat)startupRequiredPages - 0.5;
+    [startupView setProgress:(fractionalPages / maximumPages)];
+  }  
 }
 
 - (NSUInteger)startupPagesIntialised {
@@ -868,6 +879,10 @@
 
 - (NSInteger)pageNumberForURL:(NSURL*)url {
   return [dataSource document:(KGPagedDocControl*)self pageNumberForURL:url];
+}
+
+- (void)stateChanged {
+  [self startBackgroundLoadAfterDelay: 0];
 }
 
 @end

@@ -31,10 +31,14 @@
 #import "KGPagedDocControlImageStore.h"
 
 @interface KGDiskImageStore : NSObject<KGPagedDocControlImageStore> {
-    NSUInteger cacheSize;
+  NSUInteger cacheSize;
+  NSMutableArray *extraKeys;
+  NSDate *lastModifiedDate;
 }
 
 @property (nonatomic) NSUInteger cacheSize;
+@property (nonatomic, retain) NSMutableArray *extraKeys;
+@property (nonatomic, retain) NSDate *lastModifiedDate;
 
 - (void)removeAllImages;
 - (void)saveImage:(UIImage*)image forPageNumber:(NSUInteger)pageNumber orientation:(KGOrientation)orientation;

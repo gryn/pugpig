@@ -37,6 +37,7 @@
 @property (nonatomic,retain) UIViewController *rootViewController;
 @property (nonatomic,retain) UIImageView *background;
 @property (nonatomic,retain) UIProgressView *progressBar;
+@property (nonatomic,retain) UILabel *versionLabel;
 
 @end
 
@@ -50,6 +51,7 @@
 @synthesize rootViewController;
 @synthesize background;
 @synthesize progressBar;
+@synthesize versionLabel;
 
 //------------------------------------------------------------------------------
 // MARK: NSObject/UIView messages
@@ -64,15 +66,28 @@
     [self setAutoresizingMask:UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight];
     [self setBackgroundColor:[UIColor blackColor]];
     
-    self.background = [[[UIImageView alloc] initWithFrame:frame] autorelease];
+    background = [[UIImageView alloc] initWithFrame:frame];
     [self addSubview:background];
     
-    self.progressBar = [[[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar] autorelease];
+    progressBar = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar];
+    
+    [progressBar setHidden:YES];
     CGSize isize = frame.size;
     CGSize psize = progressBar.bounds.size;
     [progressBar setFrame:CGRectMake((isize.width-psize.width)/2,isize.height*2/3-psize.height/2,psize.width,psize.height)];
     [progressBar setAutoresizingMask:UIViewAutoresizingFlexibleLeftMargin|UIViewAutoresizingFlexibleRightMargin|UIViewAutoresizingFlexibleTopMargin|UIViewAutoresizingFlexibleBottomMargin];
     [background addSubview:progressBar];
+
+    NSString *version = (NSString *)[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"];
+    CGRect labelFrame = CGRectMake(0, isize.height*5/6, frame.size.width, 30);
+    versionLabel = [[[UILabel alloc] initWithFrame:labelFrame] retain];
+    versionLabel.backgroundColor = [UIColor clearColor];
+    versionLabel.textColor = [UIColor colorWithHue:0 saturation:0.43 brightness:1.0 alpha:1.0];
+    versionLabel.textAlignment = UITextAlignmentCenter;
+    versionLabel.shadowColor = [UIColor colorWithHue:0 saturation:0 brightness:0.20 alpha:0.8];
+    versionLabel.shadowOffset = CGSizeMake(0, -1);
+    versionLabel.text = [NSString stringWithFormat:@"Viewbook for iPad %@", version];
+    [background addSubview:versionLabel];
   
     [rootViewController.view addSubview:self];
   }
@@ -135,6 +150,7 @@
 // MARK: Public methods
 
 - (void)setProgress:(CGFloat)progress {
+  [progressBar setHidden: progress == 0];
   [progressBar setProgress:progress];
 }
 

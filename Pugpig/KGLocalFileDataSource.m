@@ -31,10 +31,13 @@
 
 @interface KGLocalFileDataSource()
 @property (nonatomic, retain) NSArray *urls;
+- (void)checkDateForPath:(NSString *)path;
 @end
+
 
 @implementation KGLocalFileDataSource
 
+@synthesize newestFile;
 @synthesize urls;
 
 - (id)initWithPath:(NSString*)path {
@@ -57,6 +60,7 @@
       NSString *fileName = [fileNames objectAtIndex:i];
       NSString *filePath = [fullPath stringByAppendingPathComponent:fileName];
       NSURL *fileUrl = [NSURL fileURLWithPath:filePath];
+      [self checkDateForPath: filePath];
       [tmp addObject:fileUrl];
       [pool release];
     }
@@ -66,8 +70,19 @@
   return self;
 }
 
+- (void)checkDateForPath:(NSString *)path {
+  NSDictionary* attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
+  NSDate *fileDate = (NSDate*)[attrs objectForKey:NSFileModificationDate];
+
+  if( !newestFile || (fileDate && [newestFile compare:fileDate] == NSOrderedAscending) ) {
+    if(newestFile) [newestFile release];
+    newestFile = [fileDate retain];
+  }
+}
+
 - (void)dealloc {
   [urls release];
+  [newestFile release];
   [super dealloc];
 }
 

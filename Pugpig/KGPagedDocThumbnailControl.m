@@ -46,7 +46,7 @@
 @dynamic landscapePlaceholderImage;
 
 + (id)alloc {
-  return [KGPagedDocThumbnailControlImplementation alloc];  
+  return (id)[KGPagedDocThumbnailControlImplementation alloc];  
 }
 
 - (void)newImageForPageNumber:(NSUInteger)pageNumber orientation:(KGOrientation)orientation {

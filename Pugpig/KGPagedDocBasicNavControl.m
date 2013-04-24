@@ -23,7 +23,7 @@
 @dynamic portraitSize, landscapeSize;
 
 + (id)alloc {
-    return [KGPagedDocBasicNavControlImplementation alloc];  
+    return (id)[KGPagedDocBasicNavControlImplementation alloc];  
 }
 
 - (void)newImageForPageNumber:(NSUInteger)pageNumber orientation:(KGOrientation)orientation {

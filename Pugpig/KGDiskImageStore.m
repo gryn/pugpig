@@ -60,6 +60,8 @@
 @implementation KGDiskImageStore
 
 @synthesize cacheSize;
+@synthesize extraKeys;
+@synthesize lastModifiedDate;
 @synthesize cacheDir;
 @synthesize store;
 @synthesize queue;
@@ -68,15 +70,18 @@
   self = [super init];
   if (self) {
     NSArray *cachePaths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-    self.cacheSize = 7;   // default cache size
+    extraKeys = [[NSMutableArray alloc] init];
+    cacheSize = 7;   // default cache size
     self.cacheDir = ([cachePaths count] > 0) ? [cachePaths objectAtIndex:0] : nil;
-    self.store = [[[NSMutableDictionary alloc] init] autorelease];
-    self.queue = [[[NSMutableArray alloc] init] autorelease];
+    store = [[NSMutableDictionary alloc] init];
+    queue = [[NSMutableArray alloc] init];
   }
   return self;
 }
 
 - (void)dealloc {
+  [extraKeys release];
+  [lastModifiedDate release];
   [queue release];
   [store release];
   [cacheDir release];
@@ -134,16 +139,26 @@
 }
 
 - (id)keyForPageNumber:(NSUInteger)pageNumber orientation:(KGOrientation)orientation {
-  return [NSNumber numberWithInt:(pageNumber*2 + (int)orientation)];
+  return [NSString stringWithFormat:@"%d-%@", (pageNumber*2 + (int)orientation), [extraKeys componentsJoinedByString:@"-"]];
 }
 
 - (NSString*)fileNameForKey:(id)key {
-  return  [cacheDir stringByAppendingPathComponent:[NSString stringWithFormat:@"snap-%d.jpg", [key unsignedIntegerValue]]];
+  return  [cacheDir stringByAppendingPathComponent:[NSString stringWithFormat:@"snap-%@.png", key]];
 }
 
 - (BOOL)imageWrittenForKey:(id)key {
   NSString *cacheFile = [self fileNameForKey:key];
-  return [[NSFileManager defaultManager] fileExistsAtPath:cacheFile];    
+
+  if( ![[NSFileManager defaultManager] fileExistsAtPath:cacheFile] )
+    return false;
+
+  if(!lastModifiedDate)
+    return true;
+  
+  NSDictionary* attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:cacheFile error:nil];
+  NSDate *modifiedDate = (NSDate*)[attrs objectForKey:NSFileModificationDate];
+
+  return [lastModifiedDate compare:modifiedDate] == NSOrderedAscending;    
 }
 
 - (UIImage*)readImageForKey:(id)key {
@@ -153,7 +168,7 @@
 
 - (void)writeImage:(UIImage*)image forKey:(id)key {
   NSString *cacheFile = [self fileNameForKey:key];
-  [UIImageJPEGRepresentation(image, 0.5) writeToFile:cacheFile atomically:YES];
+  [UIImagePNGRepresentation(image) writeToFile:cacheFile atomically:YES];
 }
 
 - (void)enqueueImage:(UIImage *)image forKey:(id)key {

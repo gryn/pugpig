@@ -33,6 +33,8 @@
 @interface KGLocalFileDataSource : NSObject<KGPagedDocControlDataSource> {
 }
 
+@property (nonatomic, retain) NSDate *newestFile;
+
 - (id)initWithPath:(NSString*)path;
 - (id)initWithPath:(NSString*)path andExtension:(NSString*)extension;
 
